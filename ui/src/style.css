@@ -1,0 +1,145 @@
+:root {
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: #252333;
+  background: #f7f7fb;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+  --line: #e1e0e8;
+  --dim: #777582;
+  --surface: #ffffff;
+  --surface-strong: #f0eef8;
+  --accent: #6d4bd1;
+  --accent-soft: #eee9ff;
+  --danger: #b94b5d;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #f1eff8;
+  background: #15131e;
+  --line: #393544;
+  --dim: #aaa5b6;
+  --surface: #201d2b;
+  --surface-strong: #2d273e;
+  --accent: #b6a0ff;
+  --accent-soft: #332b4c;
+  --danger: #f3a1ae;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 280px; }
+button, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(100%, 720px);
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 100dvh;
+  margin: auto;
+  padding: max(16px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  overflow: hidden;
+}
+
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.eyebrow { margin: 0 0 4px; color: var(--dim); font-size: 10px; letter-spacing: .14em; }
+h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.04em; }
+
+button.edit-button,
+button.quiet,
+.column-picker button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 14px;
+  background: var(--surface);
+  color: inherit;
+  white-space: nowrap;
+}
+
+button.edit-button { border-color: var(--accent); color: var(--accent); }
+button.edit-button:active, button.quiet:active, .column-picker button:active { transform: translateY(1px); }
+button.compact { min-height: 36px; padding-inline: 11px; }
+
+.control-panel { display: flex; flex-direction: column; gap: 10px; }
+.target-row { display: flex; align-items: center; gap: 8px; }
+.target-row label { flex: 0 0 auto; color: var(--dim); font-size: 13px; }
+.target-row select { min-width: 0; flex: 1; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--surface); color: inherit; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.column-picker { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; }
+.column-picker button { min-width: 34px; min-height: 32px; padding: 4px 8px; color: inherit; }
+.column-picker button.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.edit-hint { color: var(--accent); font-size: 12px; }
+.muted { margin: 0; color: var(--dim); font-size: 12px; line-height: 1.55; }
+.notice { margin: 0; color: var(--danger); font-size: 12px; line-height: 1.55; }
+
+.shortcut-grid {
+  --grid-gap: clamp(9px, 2.8vw, 18px);
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  min-height: 0;
+  gap: var(--grid-gap);
+  padding-inline: var(--grid-gap);
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.shortcut-grid[data-columns="3"] { --grid-gap: clamp(13px, 4vw, 22px); }
+.shortcut-grid[data-columns="4"] { --grid-gap: clamp(10px, 3.2vw, 17px); }
+.shortcut-grid[data-columns="5"] { --grid-gap: clamp(8px, 2.4vw, 13px); }
+
+.shortcut-card {
+  display: flex;
+  aspect-ratio: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.4vw, 8px);
+  border: 1px solid var(--line);
+  border-radius: clamp(13px, 3.2vw, 20px);
+  padding: 10px;
+  background: var(--surface);
+  color: inherit;
+  box-shadow: 0 2px 0 rgb(20 16 40 / 4%);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color .14s ease, background-color .14s ease, box-shadow .14s ease, transform .14s ease;
+}
+.shortcut-card:hover { border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); }
+.shortcut-card:active, .shortcut-card.pressed { transform: scale(.96) translateY(1px); border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 1px 0 rgb(20 16 40 / 4%); }
+.shortcut-card.pending { opacity: .72; }
+.shortcut-card.dragging { z-index: 2; border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 14px 28px rgb(20 16 40 / 18%); transform: scale(1.04); touch-action: none; }
+.editing .shortcut-card { touch-action: none; }
+.shortcut-icon { display: grid; width: clamp(27px, 7vw, 42px); height: clamp(27px, 7vw, 42px); place-items: center; color: var(--accent); font-size: clamp(20px, 5.5vw, 30px); line-height: 1; }
+.shortcut-title { max-width: 100%; overflow: hidden; color: inherit; font-size: clamp(14px, 3.9vw, 20px); font-weight: 700; line-height: 1.15; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.shortcut-chord { max-width: 100%; overflow: hidden; color: var(--dim); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(9px, 2.4vw, 12px); line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
+
+.toast { position: fixed; right: 16px; bottom: max(18px, env(safe-area-inset-bottom)); left: 16px; z-index: 10; width: fit-content; max-width: calc(100% - 32px); margin: auto; border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; background: var(--surface-strong); color: inherit; font-size: 12px; text-align: center; box-shadow: 0 8px 24px rgb(20 16 40 / 14%); }
+
+.receiver { justify-content: flex-start; }
+.receiver-panel { margin-top: 15vh; border: 1px solid var(--line); border-radius: 18px; padding: 28px; background: var(--surface); line-height: 1.65; }
+.receiver-panel h2 { margin: 12px 0 8px; font-size: 22px; }
+.receiver-panel p { margin: 6px 0; }
+.receiver-icon { color: var(--accent); font-size: 42px; }
+
+@media (pointer: coarse) {
+  button.edit-button, button.quiet, .column-picker button, .target-row select { min-height: 44px; }
+  .shortcut-card { touch-action: manipulation; }
+}
+
+@media (max-width: 360px) {
+  main { gap: 13px; padding-inline: 10px; }
+  .shortcut-card { padding: 7px; }
+  .shortcut-title { font-size: 14px; }
+}

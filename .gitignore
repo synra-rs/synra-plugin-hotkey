@@ -1,0 +1,6 @@
+/target/
+/plugin.wasm
+/ui/dist/
+node_modules/
+/dist/
+/.synra-build*

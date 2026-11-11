@@ -1,0 +1,88 @@
+{
+  "$schema": "https://synra-app.dev/schema/manifest/v1.json",
+  "id": "@synra-plugin/hotkey",
+  "version": "0.1.0",
+  "title": "Synra 热键",
+  "description": "在手机上触发电脑的系统基础快捷键。",
+  "publisher": {
+    "id": "synra-official",
+    "name": "Synra"
+  },
+  "sdk": {
+    "min": "0.1.0"
+  },
+  "wit": "synra:plugin@1.0.0",
+  "runtime": {
+    "headless": {
+      "artifact": "plugin.wasm",
+      "stateful": true
+    },
+    "ui": {
+      "artifact": "ui.zip",
+      "entry": "index.html"
+    }
+  },
+  "capabilities": [
+    {
+      "cap": "device:list",
+      "reason": "显示已配对的电脑，由你选择快捷键要发送到的设备。"
+    },
+    {
+      "cap": "device:send:*",
+      "reason": "向你明确选择的电脑发送固定快捷键请求。"
+    },
+    {
+      "cap": "platform:simulate-keys",
+      "reason": "仅电脑端使用：执行用户在手机上明确点击的固定系统快捷键。"
+    },
+    {
+      "cap": "action:declare:*",
+      "reason": "注册热键面板调用和电脑端响应轮询动作。"
+    },
+    {
+      "cap": "event:subscribe:_plugin.@synra-plugin/hotkey.*",
+      "reason": "接收手机发来的固定快捷键请求和电脑端执行结果。"
+    }
+  ],
+  "actions": [
+    {
+      "name": "hotkey.execute",
+      "description": "向明确选择的电脑发送一个内置系统快捷键。"
+    },
+    {
+      "name": "hotkey.response-poll",
+      "description": "读取电脑端执行固定快捷键后的结果。"
+    }
+  ],
+  "events": [
+    {
+      "name": "_plugin.@synra-plugin/hotkey.execute",
+      "payload": {
+        "type": "object",
+        "required": ["requestId", "shortcutId"],
+        "properties": {
+          "requestId": { "type": "string", "maxLength": 128 },
+          "shortcutId": { "type": "string", "maxLength": 64 }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "_plugin.@synra-plugin/hotkey.response",
+      "payload": {
+        "type": "object",
+        "required": ["requestId", "status"],
+        "properties": {
+          "requestId": { "type": "string", "maxLength": 128 },
+          "status": { "type": "string", "maxLength": 16 },
+          "code": { "type": "string", "maxLength": 64 },
+          "message": { "type": "string", "maxLength": 256 }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "handles": [
+    { "event": "_plugin.@synra-plugin/hotkey.*" }
+  ]
+}

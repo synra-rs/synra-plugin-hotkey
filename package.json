@@ -1,0 +1,19 @@
+{
+  "name": "synra-plugin-hotkey-workspace",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter @synra-plugin/hotkey-ui build",
+    "check": "pnpm --filter @synra-plugin/hotkey-ui check",
+    "test": "pnpm --filter @synra-plugin/hotkey-ui test",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "9.5.1",
+    "eslint": "10.12.0"
+  }
+}
