@@ -3,7 +3,7 @@
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
-use synra_plugin_sdk::{Error, Outcome, host};
+use synra_plugin_sdk::{Error, LogLevel, Outcome, host};
 
 pub const EXECUTE: &str = "hotkey.execute";
 pub const RESPONSE_POLL: &str = "hotkey.response-poll";
@@ -17,6 +17,11 @@ const MAX_PLATFORM: usize = 16;
 const MAX_RESPONSES: usize = 64;
 
 static RESPONSES: OnceLock<Mutex<HashMap<String, Value>>> = OnceLock::new();
+
+fn log_info(message: impl Into<String>) {
+    let message = message.into();
+    host::log(LogLevel::Info, &message, None);
+}
 
 fn responses() -> &'static Mutex<HashMap<String, Value>> {
     RESPONSES.get_or_init(|| Mutex::new(HashMap::new()))
@@ -141,10 +146,21 @@ fn execute(value: &serde_json::Map<String, Value>) -> Outcome {
         "platform": platform,
     });
     match host::device_send(target, EVENT_EXECUTE, &payload.to_string()) {
-        Outcome::Ok(_) => Outcome::Ok(
-            serde_json::json!({ "status": "queued", "requestId": request_id }).to_string(),
-        ),
-        Outcome::Err(error) => Outcome::Err(error),
+        Outcome::Ok(_) => {
+            log_info(format!(
+                "hotkey execute queued requestId={request_id} shortcutId={shortcut_id} platform={platform} target={target}"
+            ));
+            Outcome::Ok(
+                serde_json::json!({ "status": "queued", "requestId": request_id }).to_string(),
+            )
+        }
+        Outcome::Err(error) => {
+            log_info(format!(
+                "hotkey execute queue failed requestId={request_id} code={} message={}",
+                error.code, error.message
+            ));
+            Outcome::Err(error)
+        }
     }
 }
 
@@ -184,6 +200,9 @@ pub(crate) fn on_event(event_json: &str) -> Outcome {
             stored.clear();
         }
         stored.insert(request_id.to_owned(), Value::Object(payload.clone()));
+        log_info(format!(
+            "hotkey response received requestId={request_id} status={status} from={from}"
+        ));
         return Outcome::Ok(String::new());
     }
 
@@ -209,7 +228,20 @@ pub(crate) fn on_event(event_json: &str) -> Outcome {
             refused("badArgument", "shortcutId is not a built-in shortcut"),
         );
     };
-    reply(from, request_id, host::platform_simulate_keys(chord))
+    log_info(format!(
+        "hotkey execute received requestId={request_id} shortcutId={shortcut_id} platform={platform} chord={chord} from={from}"
+    ));
+    let outcome = host::platform_simulate_keys(chord);
+    match &outcome {
+        Outcome::Ok(_) => log_info(format!(
+            "hotkey platform simulate succeeded requestId={request_id} chord={chord}"
+        )),
+        Outcome::Err(error) => log_info(format!(
+            "hotkey platform simulate failed requestId={request_id} chord={chord} code={} message={}",
+            error.code, error.message
+        )),
+    }
+    reply(from, request_id, outcome)
 }
 
 fn poll_response(value: &serde_json::Map<String, Value>) -> Outcome {
@@ -245,9 +277,27 @@ fn reply(from: &str, request_id: &str, outcome: Outcome) -> Outcome {
             "message": error.message,
         }),
     };
+    let status = payload
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    log_info(format!(
+        "hotkey response sending requestId={request_id} status={status} target={from}"
+    ));
     match host::device_send(from, EVENT_RESPONSE, &payload.to_string()) {
-        Outcome::Ok(_) => Outcome::Ok(String::new()),
-        Outcome::Err(error) => Outcome::Err(error),
+        Outcome::Ok(_) => {
+            log_info(format!(
+                "hotkey response sent requestId={request_id} status={status} target={from}"
+            ));
+            Outcome::Ok(String::new())
+        }
+        Outcome::Err(error) => {
+            log_info(format!(
+                "hotkey response send failed requestId={request_id} code={} message={}",
+                error.code, error.message
+            ));
+            Outcome::Err(error)
+        }
     }
 }
 
