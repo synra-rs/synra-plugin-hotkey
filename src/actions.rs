@@ -63,16 +63,18 @@ pub fn chord_for(shortcut_id: &str, platform: &str) -> Option<&'static str> {
             "open-folder" => "cmd+shift+g",
             _ => return None,
         },
+        // Discovery may only report the generic desktop kind. Synra's current desktop receiver is Windows, so use the
+        // Windows SendKeys spelling for this fallback rather than sending the literal `ctrl+c` text.
         "desktop" => match shortcut_id {
-            "copy" => "ctrl+c",
-            "cut" => "ctrl+x",
-            "paste" => "ctrl+v",
-            "undo" => "ctrl+z",
-            "redo" => "ctrl+y",
-            "select-all" => "ctrl+a",
-            "save" => "ctrl+s",
-            "find" => "ctrl+f",
-            "open-folder" => "win+e",
+            "copy" => "^c",
+            "cut" => "^x",
+            "paste" => "^v",
+            "undo" => "^z",
+            "redo" => "^y",
+            "select-all" => "^a",
+            "save" => "^s",
+            "find" => "^f",
+            "open-folder" => "{LWIN}e",
             _ => return None,
         },
         _ => return None,
@@ -319,7 +321,8 @@ mod tests {
     fn built_in_shortcuts_have_fixed_chords() {
         assert_eq!(chord_for("copy", "windows"), Some("^c"));
         assert_eq!(chord_for("paste", "linux"), Some("ctrl+v"));
-        assert_eq!(chord_for("open-folder", "desktop"), Some("win+e"));
+        assert_eq!(chord_for("copy", "desktop"), Some("^c"));
+        assert_eq!(chord_for("open-folder", "desktop"), Some("{LWIN}e"));
     }
 
     #[test]

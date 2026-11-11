@@ -84,7 +84,7 @@ async function sendShortcut(shortcut: Shortcut) {
       showToast(`已发送：${shortcut.title}`)
     }
     else {
-      showToast(response.message ?? failureMessage({ code: response.code ?? 'internal' }))
+      showToast(failureMessage({ code: response.code ?? 'internal', message: response.message }))
     }
   }
   catch (reason: unknown) {

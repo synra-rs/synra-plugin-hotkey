@@ -39,5 +39,12 @@ export async function waitForRemoteResponse(host: HotkeyHost, requestId: string,
 }
 
 export function failureMessage(reason: unknown): string {
+  const message = typeof reason === 'string'
+    ? reason
+    : typeof reason === 'object' && reason !== null && 'message' in reason && typeof reason.message === 'string'
+      ? reason.message
+      : ''
+  if (/simulating keys is not enabled/i.test(message))
+    return '请在电脑端 Synra 设置中开启“允许插件模拟按键”，再重试。'
   return messageFor(errorCode(reason))
 }

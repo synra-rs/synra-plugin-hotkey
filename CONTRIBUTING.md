@@ -35,6 +35,9 @@ without releasing or publishing packages.
   response store through `hotkey.response-poll`.
 - Every request is bounded by a validated device ID, request ID and shortcut ID. Unknown IDs are
   rejected before any host call.
+- The plugin grant and the desktop host's separate `simulate_keys` policy are both required. A
+  `SimulateKeysNotGranted` response is surfaced as a settings instruction instead of being shown as
+  a generic transport failure.
 - Native key simulation, device delivery and permission prompts require acceptance on a real
   Synra phone and computer; unit tests and `synra-plugin verify` cover different layers.
 
