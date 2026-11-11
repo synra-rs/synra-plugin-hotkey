@@ -1,9 +1,14 @@
 //! Fixed hotkey delivery and the desktop receiver event.
 
 use serde_json::Value;
-use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
-use synra_plugin_sdk::{Error, LogLevel, Outcome, host};
+use synra_plugin_sdk::{LogLevel, Outcome, host};
+
+#[path = "responses.rs"]
+mod responses;
+#[path = "validation.rs"]
+mod validation;
+
+use validation::{is_device_id, platform, refused, request_id, required_string, target};
 
 pub const EXECUTE: &str = "hotkey.execute";
 pub const RESPONSE_POLL: &str = "hotkey.response-poll";
@@ -14,17 +19,9 @@ const MAX_ARGS: usize = 4096;
 const MAX_REQUEST_ID: usize = 128;
 const MAX_SHORTCUT_ID: usize = 64;
 const MAX_PLATFORM: usize = 16;
-const MAX_RESPONSES: usize = 64;
-
-static RESPONSES: OnceLock<Mutex<HashMap<String, Value>>> = OnceLock::new();
-
 fn log_info(message: impl Into<String>) {
     let message = message.into();
     host::log(LogLevel::Info, &message, None);
-}
-
-fn responses() -> &'static Mutex<HashMap<String, Value>> {
-    RESPONSES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Return the only platform-specific chord that can be emitted for a built-in shortcut id.
@@ -115,7 +112,7 @@ pub(crate) fn invoke(name: &str, args: &str) -> Outcome {
     };
     match name {
         EXECUTE => execute(&value),
-        RESPONSE_POLL => poll_response(&value),
+        RESPONSE_POLL => responses::poll(&value),
         _ => refused("actionNotFound", "unknown Hotkey action"),
     }
 }
@@ -193,13 +190,9 @@ pub(crate) fn on_event(event_json: &str) -> Outcome {
         if !matches!(status, "pending" | "ok" | "error") {
             return refused("badArgument", "event response status is invalid");
         }
-        let Ok(mut stored) = responses().lock() else {
-            return refused("internal", "event response storage is unavailable");
-        };
-        if stored.len() >= MAX_RESPONSES {
-            stored.clear();
+        if let Err(error) = responses::store(request_id, Value::Object(payload.clone())) {
+            return error;
         }
-        stored.insert(request_id.to_owned(), Value::Object(payload.clone()));
         log_info(format!(
             "hotkey response received requestId={request_id} status={status} from={from}"
         ));
@@ -215,14 +208,14 @@ pub(crate) fn on_event(event_json: &str) -> Outcome {
     };
     let shortcut_id = match required_string(payload, "shortcutId", MAX_SHORTCUT_ID) {
         Ok(value) => value,
-        Err(error) => return reply(from, request_id, error),
+        Err(error) => return responses::reply(from, request_id, error),
     };
     let platform = match platform(payload) {
         Ok(value) => value,
-        Err(error) => return reply(from, request_id, error),
+        Err(error) => return responses::reply(from, request_id, error),
     };
     let Some(chord) = chord_for(shortcut_id, platform) else {
-        return reply(
+        return responses::reply(
             from,
             request_id,
             refused("badArgument", "shortcutId is not a built-in shortcut"),
@@ -241,126 +234,7 @@ pub(crate) fn on_event(event_json: &str) -> Outcome {
             error.code, error.message
         )),
     }
-    reply(from, request_id, outcome)
-}
-
-fn poll_response(value: &serde_json::Map<String, Value>) -> Outcome {
-    let request_id = match request_id(value) {
-        Ok(value) => value,
-        Err(error) => return error,
-    };
-    let Ok(mut stored) = responses().lock() else {
-        return refused("internal", "event response storage is unavailable");
-    };
-    Outcome::Ok(
-        stored
-            .remove(request_id)
-            .unwrap_or_else(|| serde_json::json!({ "status": "pending", "requestId": request_id }))
-            .to_string(),
-    )
-}
-
-fn reply(from: &str, request_id: &str, outcome: Outcome) -> Outcome {
-    let payload = match outcome {
-        Outcome::Ok(value) => {
-            let value = serde_json::from_str::<Value>(&value).unwrap_or(Value::String(value));
-            serde_json::json!({
-                "requestId": request_id,
-                "status": "ok",
-                "value": value,
-            })
-        }
-        Outcome::Err(error) => serde_json::json!({
-            "requestId": request_id,
-            "status": "error",
-            "code": error.code,
-            "message": error.message,
-        }),
-    };
-    let status = payload
-        .get("status")
-        .and_then(Value::as_str)
-        .unwrap_or("unknown");
-    log_info(format!(
-        "hotkey response sending requestId={request_id} status={status} target={from}"
-    ));
-    match host::device_send(from, EVENT_RESPONSE, &payload.to_string()) {
-        Outcome::Ok(_) => {
-            log_info(format!(
-                "hotkey response sent requestId={request_id} status={status} target={from}"
-            ));
-            Outcome::Ok(String::new())
-        }
-        Outcome::Err(error) => {
-            log_info(format!(
-                "hotkey response send failed requestId={request_id} code={} message={}",
-                error.code, error.message
-            ));
-            Outcome::Err(error)
-        }
-    }
-}
-
-fn target(value: &serde_json::Map<String, Value>) -> Result<&str, Outcome> {
-    let target = required_string(value, "target", 64)?;
-    if !is_device_id(target) {
-        return Err(refused(
-            "badArgument",
-            "target must be a canonical device id",
-        ));
-    }
-    Ok(target)
-}
-
-fn request_id(value: &serde_json::Map<String, Value>) -> Result<&str, Outcome> {
-    required_string(value, "requestId", MAX_REQUEST_ID)
-}
-
-fn platform(value: &serde_json::Map<String, Value>) -> Result<&str, Outcome> {
-    let platform = required_string(value, "platform", MAX_PLATFORM)?;
-    if !matches!(platform, "windows" | "linux" | "macos" | "desktop") {
-        return Err(refused("badArgument", "platform is not supported"));
-    }
-    Ok(platform)
-}
-
-fn required_string<'a>(
-    value: &'a serde_json::Map<String, Value>,
-    key: &str,
-    max: usize,
-) -> Result<&'a str, Outcome> {
-    let Some(value) = value.get(key).and_then(Value::as_str) else {
-        return Err(refused(
-            "badArgument",
-            "required hotkey argument is missing",
-        ));
-    };
-    if value.is_empty() || value.len() > max {
-        return Err(refused(
-            "badArgument",
-            "hotkey argument has an invalid length",
-        ));
-    }
-    Ok(value)
-}
-
-fn is_device_id(value: &str) -> bool {
-    value.len() == 36
-        && value.as_bytes().iter().enumerate().all(|(index, byte)| {
-            if matches!(index, 8 | 13 | 18 | 23) {
-                *byte == b'-'
-            } else {
-                byte.is_ascii_hexdigit()
-            }
-        })
-}
-
-fn refused(code: &str, message: &str) -> Outcome {
-    Outcome::Err(Error {
-        code: code.to_owned(),
-        message: message.to_owned(),
-        details: None,
-    })
+    responses::reply(from, request_id, outcome)
 }
 
 #[cfg(test)]
