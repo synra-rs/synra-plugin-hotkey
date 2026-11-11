@@ -27,10 +27,10 @@ without releasing or publishing packages.
 
 ## Hotkey contract
 
-- The phone invokes `hotkey.execute` with an explicitly selected target device and a built-in
-  shortcut ID. The action never accepts an arbitrary key chord.
+- The phone invokes `hotkey.execute` with an explicitly selected target device, its platform and a
+  built-in shortcut ID. The action never accepts an arbitrary key chord.
 - The plugin sends the shortcut ID over `_plugin.@synra-plugin/hotkey.execute` and the computer
-  maps that ID to its fixed chord before calling `platform:simulate-keys`.
+  maps that ID to its fixed platform chord before calling `platform:simulate-keys`.
 - The computer replies over `_plugin.@synra-plugin/hotkey.response`; the phone polls the bounded
   response store through `hotkey.response-poll`.
 - Every request is bounded by a validated device ID, request ID and shortcut ID. Unknown IDs are
@@ -40,9 +40,9 @@ without releasing or publishing packages.
 
 ## UI verification
 
-The Vue tests cover shortcut labels, fixed action IDs, target decoding, column switching and
-order normalization. The UI keeps fixed shortcut definitions and persists only column count and
-order. The drag interaction should be exercised on a touch device in addition to the automated
-pointer tests.
+The Vue tests cover shortcut labels and UnoCSS icon classes, fixed action IDs and target platform,
+target decoding, column switching and order normalization. The UI keeps fixed shortcut definitions
+and persists only column count and order. The drag interaction should be exercised on a touch device
+in addition to the automated pointer tests.
 
 See the [Hotkey design documents](./ai-docs/design-docs) and the [official plugin contract](https://github.com/synra-rs/design-docs/blob/main/29-official-plugins.md).

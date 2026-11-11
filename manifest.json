@@ -59,10 +59,11 @@
       "name": "_plugin.@synra-plugin/hotkey.execute",
       "payload": {
         "type": "object",
-        "required": ["requestId", "shortcutId"],
+        "required": ["requestId", "shortcutId", "platform"],
         "properties": {
           "requestId": { "type": "string", "maxLength": 128 },
-          "shortcutId": { "type": "string", "maxLength": 64 }
+          "shortcutId": { "type": "string", "maxLength": 64 },
+          "platform": { "type": "string", "maxLength": 16 }
         },
         "additionalProperties": false
       }

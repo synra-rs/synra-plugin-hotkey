@@ -72,6 +72,7 @@ async function sendShortcut(shortcut: Shortcut) {
       target: selected.value.deviceId,
       requestId,
       shortcutId: shortcut.id,
+      platform: selected.value.platform,
     })
     if (typeof queued !== 'object' || queued === null || !('requestId' in queued) || queued.requestId !== requestId)
       throw new Error('invalid_queue_response')
@@ -181,7 +182,7 @@ onScopeDispose(() => {
     </header>
 
     <section v-if="isDesktop" class="receiver-panel" aria-labelledby="receiver-title">
-      <span class="receiver-icon" aria-hidden="true">⌨</span>
+      <span class="receiver-icon i-carbon-keyboard" aria-hidden="true" />
       <h2 id="receiver-title">
         电脑端已就绪
       </h2>
@@ -250,7 +251,7 @@ onScopeDispose(() => {
           @pointercancel="endDrag"
           @lostpointercapture="endDrag"
         >
-          <span class="shortcut-icon" aria-hidden="true">{{ shortcut.icon }}</span>
+          <span class="shortcut-icon" :class="shortcut.icon" aria-hidden="true" />
           <span class="shortcut-title">{{ shortcut.title }}</span>
           <span class="shortcut-chord">{{ shortcut.chord }}</span>
         </button>

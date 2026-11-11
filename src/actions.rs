@@ -13,6 +13,7 @@ pub const EVENT_RESPONSE: &str = "_plugin.@synra-plugin/hotkey.response";
 const MAX_ARGS: usize = 4096;
 const MAX_REQUEST_ID: usize = 128;
 const MAX_SHORTCUT_ID: usize = 64;
+const MAX_PLATFORM: usize = 16;
 const MAX_RESPONSES: usize = 64;
 
 static RESPONSES: OnceLock<Mutex<HashMap<String, Value>>> = OnceLock::new();
@@ -21,18 +22,59 @@ fn responses() -> &'static Mutex<HashMap<String, Value>> {
     RESPONSES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Return the only chord that can be emitted for a built-in shortcut id.
-pub fn chord_for(shortcut_id: &str) -> Option<&'static str> {
-    Some(match shortcut_id {
-        "copy" => "ctrl+c",
-        "cut" => "ctrl+x",
-        "paste" => "ctrl+v",
-        "undo" => "ctrl+z",
-        "redo" => "ctrl+y",
-        "select-all" => "ctrl+a",
-        "save" => "ctrl+s",
-        "find" => "ctrl+f",
-        "open-folder" => "win+e",
+/// Return the only platform-specific chord that can be emitted for a built-in shortcut id.
+pub fn chord_for(shortcut_id: &str, platform: &str) -> Option<&'static str> {
+    Some(match platform {
+        // Windows SendKeys uses ^ for Ctrl. `{LWIN}` is the SendKeys spelling for the Windows modifier on hosts that
+        // expose it; the host may still refuse it when the underlying SendKeys implementation lacks Win-key support.
+        "windows" => match shortcut_id {
+            "copy" => "^c",
+            "cut" => "^x",
+            "paste" => "^v",
+            "undo" => "^z",
+            "redo" => "^y",
+            "select-all" => "^a",
+            "save" => "^s",
+            "find" => "^f",
+            "open-folder" => "{LWIN}e",
+            _ => return None,
+        },
+        "linux" => match shortcut_id {
+            "copy" => "ctrl+c",
+            "cut" => "ctrl+x",
+            "paste" => "ctrl+v",
+            "undo" => "ctrl+z",
+            "redo" => "ctrl+y",
+            "select-all" => "ctrl+a",
+            "save" => "ctrl+s",
+            "find" => "ctrl+f",
+            "open-folder" => "super+e",
+            _ => return None,
+        },
+        "macos" => match shortcut_id {
+            "copy" => "cmd+c",
+            "cut" => "cmd+x",
+            "paste" => "cmd+v",
+            "undo" => "cmd+z",
+            "redo" => "cmd+y",
+            "select-all" => "cmd+a",
+            "save" => "cmd+s",
+            "find" => "cmd+f",
+            "open-folder" => "cmd+shift+g",
+            _ => return None,
+        },
+        "desktop" => match shortcut_id {
+            "copy" => "ctrl+c",
+            "cut" => "ctrl+x",
+            "paste" => "ctrl+v",
+            "undo" => "ctrl+z",
+            "redo" => "ctrl+y",
+            "select-all" => "ctrl+a",
+            "save" => "ctrl+s",
+            "find" => "ctrl+f",
+            "open-folder" => "win+e",
+            _ => return None,
+        },
         _ => return None,
     })
 }
@@ -41,7 +83,7 @@ pub(crate) fn declare() -> Outcome {
     for (name, schema) in [
         (
             EXECUTE,
-            r#"{"type":"object","properties":{"target":{"type":"string"},"requestId":{"type":"string"},"shortcutId":{"type":"string"}},"required":["target","requestId","shortcutId"],"additionalProperties":false}"#,
+            r#"{"type":"object","properties":{"target":{"type":"string"},"requestId":{"type":"string"},"shortcutId":{"type":"string"},"platform":{"type":"string"}},"required":["target","requestId","shortcutId","platform"],"additionalProperties":false}"#,
         ),
         (
             RESPONSE_POLL,
@@ -84,12 +126,17 @@ fn execute(value: &serde_json::Map<String, Value>) -> Outcome {
         Ok(value) => value,
         Err(error) => return error,
     };
-    if chord_for(shortcut_id).is_none() {
+    let platform = match platform(value) {
+        Ok(value) => value,
+        Err(error) => return error,
+    };
+    if chord_for(shortcut_id, platform).is_none() {
         return refused("badArgument", "shortcutId is not a built-in shortcut");
     }
     let payload = serde_json::json!({
         "requestId": request_id,
         "shortcutId": shortcut_id,
+        "platform": platform,
     });
     match host::device_send(target, EVENT_EXECUTE, &payload.to_string()) {
         Outcome::Ok(_) => Outcome::Ok(
@@ -149,7 +196,11 @@ pub(crate) fn on_event(event_json: &str) -> Outcome {
         Ok(value) => value,
         Err(error) => return reply(from, request_id, error),
     };
-    let Some(chord) = chord_for(shortcut_id) else {
+    let platform = match platform(payload) {
+        Ok(value) => value,
+        Err(error) => return reply(from, request_id, error),
+    };
+    let Some(chord) = chord_for(shortcut_id, platform) else {
         return reply(
             from,
             request_id,
@@ -213,6 +264,14 @@ fn request_id(value: &serde_json::Map<String, Value>) -> Result<&str, Outcome> {
     required_string(value, "requestId", MAX_REQUEST_ID)
 }
 
+fn platform(value: &serde_json::Map<String, Value>) -> Result<&str, Outcome> {
+    let platform = required_string(value, "platform", MAX_PLATFORM)?;
+    if !matches!(platform, "windows" | "linux" | "macos" | "desktop") {
+        return Err(refused("badArgument", "platform is not supported"));
+    }
+    Ok(platform)
+}
+
 fn required_string<'a>(
     value: &'a serde_json::Map<String, Value>,
     key: &str,
@@ -258,13 +317,13 @@ mod tests {
 
     #[test]
     fn built_in_shortcuts_have_fixed_chords() {
-        assert_eq!(chord_for("copy"), Some("ctrl+c"));
-        assert_eq!(chord_for("paste"), Some("ctrl+v"));
-        assert_eq!(chord_for("open-folder"), Some("win+e"));
+        assert_eq!(chord_for("copy", "windows"), Some("^c"));
+        assert_eq!(chord_for("paste", "linux"), Some("ctrl+v"));
+        assert_eq!(chord_for("open-folder", "desktop"), Some("win+e"));
     }
 
     #[test]
     fn unknown_shortcuts_are_refused() {
-        assert_eq!(chord_for("ctrl-alt-delete"), None);
+        assert_eq!(chord_for("ctrl-alt-delete", "windows"), None);
     }
 }

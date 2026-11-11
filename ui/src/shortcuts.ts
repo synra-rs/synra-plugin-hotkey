@@ -6,15 +6,15 @@ export interface Shortcut {
 }
 
 export const SHORTCUTS: readonly Shortcut[] = [
-  { id: 'copy', title: '复制', chord: 'Ctrl C', icon: '⧉' },
-  { id: 'cut', title: '剪切', chord: 'Ctrl X', icon: '✂' },
-  { id: 'paste', title: '粘贴', chord: 'Ctrl V', icon: '▣' },
-  { id: 'undo', title: '撤销', chord: 'Ctrl Z', icon: '↶' },
-  { id: 'redo', title: '重做', chord: 'Ctrl Y', icon: '↷' },
-  { id: 'select-all', title: '全选', chord: 'Ctrl A', icon: '☷' },
-  { id: 'save', title: '保存', chord: 'Ctrl S', icon: '▤' },
-  { id: 'find', title: '查找', chord: 'Ctrl F', icon: '⌕' },
-  { id: 'open-folder', title: '打开文件夹', chord: 'Win E', icon: '▰' },
+  { id: 'copy', title: '复制', chord: 'Ctrl C', icon: 'i-carbon-copy' },
+  { id: 'cut', title: '剪切', chord: 'Ctrl X', icon: 'i-carbon-cut' },
+  { id: 'paste', title: '粘贴', chord: 'Ctrl V', icon: 'i-carbon-paste' },
+  { id: 'undo', title: '撤销', chord: 'Ctrl Z', icon: 'i-carbon-undo' },
+  { id: 'redo', title: '重做', chord: 'Ctrl Y', icon: 'i-carbon-redo' },
+  { id: 'select-all', title: '全选', chord: 'Ctrl A', icon: 'i-carbon-select-window' },
+  { id: 'save', title: '保存', chord: 'Ctrl S', icon: 'i-carbon-save' },
+  { id: 'find', title: '查找', chord: 'Ctrl F', icon: 'i-carbon-search' },
+  { id: 'open-folder', title: '打开文件夹', chord: 'Win E', icon: 'i-carbon-folder' },
 ]
 
 export type ColumnCount = 3 | 4 | 5

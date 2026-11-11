@@ -121,7 +121,7 @@ button.compact { min-height: 36px; padding-inline: 11px; }
 .shortcut-card.pending { opacity: .72; }
 .shortcut-card.dragging { z-index: 2; border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 14px 28px rgb(20 16 40 / 18%); transform: scale(1.04); touch-action: none; }
 .editing .shortcut-card { touch-action: none; }
-.shortcut-icon { display: grid; width: clamp(27px, 7vw, 42px); height: clamp(27px, 7vw, 42px); place-items: center; color: var(--accent); font-size: clamp(20px, 5.5vw, 30px); line-height: 1; }
+.shortcut-icon { display: inline-block; flex: 0 0 auto; width: clamp(27px, 7vw, 42px); height: clamp(27px, 7vw, 42px); color: var(--accent); line-height: 1; }
 .shortcut-title { max-width: 100%; overflow: hidden; color: inherit; font-size: clamp(14px, 3.9vw, 20px); font-weight: 700; line-height: 1.15; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .shortcut-chord { max-width: 100%; overflow: hidden; color: var(--dim); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(9px, 2.4vw, 12px); line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -131,7 +131,7 @@ button.compact { min-height: 36px; padding-inline: 11px; }
 .receiver-panel { margin-top: 15vh; border: 1px solid var(--line); border-radius: 18px; padding: 28px; background: var(--surface); line-height: 1.65; }
 .receiver-panel h2 { margin: 12px 0 8px; font-size: 22px; }
 .receiver-panel p { margin: 6px 0; }
-.receiver-icon { color: var(--accent); font-size: 42px; }
+.receiver-icon { display: inline-block; width: 42px; height: 42px; color: var(--accent); }
 
 @media (pointer: coarse) {
   button.edit-button, button.quiet, .column-picker button, .target-row select { min-height: 44px; }

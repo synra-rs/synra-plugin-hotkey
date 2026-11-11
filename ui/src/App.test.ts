@@ -52,11 +52,12 @@ describe('hotkey panel', () => {
     const wrapper = mount(App, { props: { host: hostWith(calls) } })
     await flushPromises()
     expect(wrapper.text()).toContain('复制')
+    expect(wrapper.get('[data-testid="shortcut-copy"] .shortcut-icon').classes()).toContain('i-carbon-copy')
     await wrapper.get('#target-computer').setValue(computer.deviceId)
     await wrapper.get('[data-testid="shortcut-copy"]').trigger('click')
     await flushPromises()
     expect(calls.map(call => call.action)).toEqual(['hotkey.execute', 'hotkey.response-poll'])
-    expect(calls[0]?.args).toMatchObject({ target: computer.deviceId, shortcutId: 'copy' })
+    expect(calls[0]?.args).toMatchObject({ target: computer.deviceId, shortcutId: 'copy', platform: 'windows' })
   })
 
   it('switches between three and five columns without changing the shortcut list', async () => {
